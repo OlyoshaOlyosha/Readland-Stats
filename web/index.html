@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Readlang Stats</title>
+<link rel="stylesheet" href="/static/style.css" />
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
+</head>
+<body>
+<header>
+  <h1 data-i18n="app.title">Readlang Stats</h1>
+  <div class="tabs" id="tabs">
+    <button data-tab="overview" class="active" data-i18n="tabs.overview">Overview</button>
+    <button data-tab="calendar" data-i18n="tabs.calendar">Calendar</button>
+    <button data-tab="words" data-i18n="tabs.words">Words</button>
+    <button data-tab="editor" data-i18n="tabs.editor">Editor</button>
+    <button data-tab="settings" data-i18n="tabs.settings">Settings</button>
+  </div>
+</header>
+
+<main>
+  <section id="tab-overview" class="tab"></section>
+  <section id="tab-calendar" class="tab" hidden></section>
+  <section id="tab-words" class="tab" hidden></section>
+  <section id="tab-editor" class="tab" hidden></section>
+  <section id="tab-settings" class="tab" hidden></section>
+</main>
+
+<div class="toast" id="toast"></div>
+
+<div class="modal-backdrop" id="editModal" hidden>
+  <div class="modal">
+    <h2 id="modalTitle"></h2>
+    <label class="muted" data-i18n="editor.word">Word</label>
+    <input id="modalWord">
+    <label class="muted" data-i18n="editor.translation">Translation</label>
+    <input id="modalTranslation">
+    <label class="muted" data-i18n="editor.contexts">Contexts</label>
+    <textarea id="modalContexts"></textarea>
+    <div class="context-preview" id="modalPreview"></div>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" id="modalCancel" data-i18n="editor.cancel">Cancel</button>
+      <button class="btn" id="modalSave" data-i18n="editor.save">Save</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-backdrop" id="bulkModal" hidden>
+  <div class="modal modal-xl">
+    <h2 data-i18n="bulk.title">Paste JSON from the LLM</h2>
+
+    <div class="bulk-step">
+      <div class="bulk-step-title" data-i18n="bulk.step2">Paste the JSON response</div>
+      <p class="bulk-hint" data-i18n="bulk.step2_hint"></p>
+      <textarea id="bulkInput" class="bulk-mono" placeholder='[{"word": "diary", "new_word": "diary", "translation": "дневник", "contexts": "diary"}]'></textarea>
+      <div class="bulk-actions">
+        <button class="btn btn-secondary" id="bulkCopyAgain" data-i18n="bulk.copy_again">Copy export again</button>
+        <button class="btn" id="bulkParse" data-i18n="bulk.parse">Parse &amp; Preview</button>
+      </div>
+    </div>
+
+    <div class="bulk-step" id="bulkPreviewStep" hidden>
+      <div class="bulk-step-title" data-i18n="bulk.step3">Preview changes</div>
+      <p class="bulk-hint" data-i18n="bulk.step3_hint"></p>
+      <div id="bulkSummary" class="bulk-summary"></div>
+      <div id="bulkConflicts"></div>
+      <div id="bulkUnanchored"></div>
+      <div id="bulkPreview"></div>
+      <div class="pagination" id="bulkPagination"></div>
+      <div class="bulk-actions">
+        <button class="btn btn-secondary" id="bulkSelectAll" data-i18n="bulk.select_all">Select all</button>
+        <button class="btn btn-secondary" id="bulkSelectNone" data-i18n="bulk.select_none">Select none</button>
+        <button class="btn btn-secondary" id="bulkInvert" data-i18n="bulk.invert">Invert</button>
+      </div>
+      <div class="bulk-actions">
+        <button class="btn btn-secondary" id="bulkApplyTranslations" data-i18n="bulk.apply_translations">Apply all translations</button>
+        <button class="btn btn-secondary" id="bulkApplyContexts" data-i18n="bulk.apply_contexts">Apply all contexts</button>
+        <button class="btn btn-secondary" id="bulkApplyRenames" data-i18n="bulk.apply_renames">Apply all renames</button>
+      </div>
+    </div>
+
+    <div class="modal-actions">
+      <button class="btn btn-secondary" id="bulkCancel" data-i18n="editor.cancel">Cancel</button>
+      <button class="btn" id="bulkApply" disabled data-i18n="bulk.apply">Apply</button>
+    </div>
+  </div>
+</div>
+
+<script src="/static/i18n.js"></script>
+<script src="/static/app.js"></script>
+</body>
+</html>
