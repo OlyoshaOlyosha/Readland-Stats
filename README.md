@@ -1,54 +1,80 @@
 # Readlang Stats
 
-A local web dashboard for your [Readlang](https://readlang.com/) vocabulary export.
+[![Python](https://img.shields.io/badge/Python-3.10+-3776AB?logo=python&logoColor=white)](https://www.python.org/)
+[![FastAPI](https://img.shields.io/badge/FastAPI-009688?logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-It reads the CSV file you export from Readlang, computes spaced-repetition
-analytics (status distribution, CEFR profile, review load, streaks, difficult
-words, and more), and gives you a built-in editor for cleaning up words,
-translations, and contexts — including an LLM-assisted bulk-edit workflow.
+A local dashboard for your [Readlang](https://readlang.com/) CSV export:
+spaced-repetition analytics, review scheduling, and a built-in editor with an
+LLM-assisted bulk-edit workflow. Runs entirely on `localhost` — no data leaves
+your machine.
 
-Everything runs on your machine. No data leaves `localhost`.
+## Contents
+
+- [Features](#features)
+- [Screenshots](#screenshots)
+- [Requirements](#requirements)
+- [Install](#install)
+- [Prepare your data](#prepare-your-data)
+- [Run](#run)
+- [Usage](#usage)
+- [Bulk editing with an LLM](#bulk-editing-with-an-llm)
+- [Files and backups](#files-and-backups)
+- [Project layout](#project-layout)
+- [Development](#development)
+- [License](#license)
 
 ---
 
 ## Features
 
-- **Overview** — KPI cards and charts: word states (new / learning / young /
-  mature), memory quality (avg easiness, total attempts, avg CEFR level,
-  attempts-to-consolidate), activity (streaks, overdue, avg daily load),
-  CEFR profile, easiness histogram, interval distribution, weekly pace,
-  hour-of-day activity, cumulative growth, and a 365-day activity heatmap.
-- **Calendar** — upcoming reviews for the next 60 days, a 365-day review-load
-  heatmap, words due today/tomorrow, and a list of overdue words.
-- **Words** — sortable, filterable, paginated table of every reviewed word
-  with difficulty score (`attempts / easiness`), plus an interactive scatter
-  plot (attempts × easiness, colored by CEFR level). The X axis can switch
-  between attempts, word length, and context length.
-- **Editor** — inline editing of any word's word / translation / contexts with
-  live context preview and backend validation, JSON export of the current
-  filter, and a paste-JSON bulk-edit flow for LLM-driven cleanup.
-- **Settings** — switch UI language (English / Russian), adjust SRS
-  thresholds, reload the CEFR dataset, and see info about the data file
-  (path, size, last modified, word count).
-- **Copy as Markdown** — every major tab has a button that copies the current
-  numbers and tables as Markdown, handy for pasting into notes or an LLM chat.
+**Overview** · **Calendar** · **Words** · **Editor** · **Settings** — five screens, each focused on one question. Details in [Usage → Tabs](#tabs).
+
+### Cross-cutting
+
+- **Copy as Markdown** — every major tab has a button that copies its numbers and tables as Markdown. Handy for pasting into notes, an Obsidian vault, or an LLM chat.
+- **Bilingual UI** — English and Russian out of the box. Adding a language is two steps (drop `static/i18n/xx.json`, add `"xx"` to `SUPPORTED` in `static/i18n.js`).
+- **Local-only** — the app binds to `127.0.0.1` and never sends your data anywhere. The only outbound request is the Chart.js CDN on first page load.
+
+---
+
+## Screenshots
+
+### Overview — KPIs and charts
+![Overview tab](docs/screenshots/01-overview.png)
+*Word states, memory quality, activity load, CEFR profile, easiness by level, and interval distribution.*
+
+### Calendar — what's due and what's overdue
+![Calendar tab](docs/screenshots/02-calendar.png)
+*60-day review forecast, 365-day load heatmap, words due today/tomorrow, and the overdue backlog.*
+
+### Words — find the hardest entries
+![Words tab](docs/screenshots/03-words.png)
+*Scatter plot (attempts × easiness, colored by CEFR level) next to a sortable table of the hardest words.*
+
+### Editor — inline and bulk edits
+![Editor tab](docs/screenshots/04-editor.png)
+*Inline editing with live context preview, plus JSON export/import for the LLM-assisted bulk-edit workflow.*
+
+### Settings
+![Settings tab](docs/screenshots/05-settings.png)
+*UI language, SRS thresholds, CEFR dataset reload, and data-file info.*
 
 ---
 
 ## Requirements
 
-- **Python 3.10 or newer** (the project targets `py310`).
+- **Python 3.10 or newer**.
 - A Readlang CSV export placed at `data/user/readlang-data.txt`.
-- A modern browser. An internet connection is needed on first load — Chart.js
-  and the datalabels plugin are loaded from `cdn.jsdelivr.net`.
+- A modern browser.
+
+The first page load pulls Chart.js and the datalabels plugin from
+`cdn.jsdelivr.net`, so an internet connection is needed once. After that
+everything runs offline.
 
 ---
 
 ## Install
-
-The project intentionally ships with no locked dependency list; the only
-runtime dependencies are FastAPI (which brings Pydantic and Starlette) and
-Uvicorn.
 
 ```bash
 git clone https://github.com/OlyoshaOlyosha/Readland-Stats
@@ -57,7 +83,7 @@ cd Readland-Stats
 python -m venv .venv
 source .venv/bin/activate          # Windows: .venv\Scripts\activate
 
-pip install fastapi uvicorn
+pip install -r requirements.txt
 ```
 
 ---
@@ -104,9 +130,8 @@ python main.py
 
 Then open <http://127.0.0.1:8000> in your browser.
 
-The launcher runs Uvicorn against `app.main:app` on `127.0.0.1:8000`. Auto‑reload
-is disabled by default (`DEBUG = False` in `app/config.py`); enable it there
-if you're hacking on the backend.
+Auto-reload is disabled by default (`DEBUG = False` in `app/config.py`). Enable
+it there if you're hacking on the backend.
 
 ---
 
@@ -144,22 +169,37 @@ least `1` and stored in `data/settings.json`.
 
 ## Bulk editing with an LLM
 
-The Editor tab has a two-step workflow for cleaning up many words at once:
+The Editor tab has a three-step workflow for cleaning up many words at once:
+export the current filter as JSON, hand it to an LLM, paste the reply back,
+review a char-level diff, apply. The backend takes one backup and writes
+once — invalid items are skipped, valid ones are applied.
 
-1. **Export JSON.** Click **Export JSON** in the Editor. The current filter's
-   words are copied to your clipboard as a JSON array of
-   `{ word, translation, contexts }` objects, sorted by difficulty.
-2. **Paste back.** Click **Paste JSON**, send the array to an LLM, and paste
-   its reply into the textarea. The reply must be the same array:
-   - `word` is the **anchor** — it identifies the row and must not change.
-   - To **rename**, add a `new_word` field (the new form must appear in the
-     new contexts, or the row is flagged `not_in_context`).
-   - Line breaks inside strings must be escaped as `\n`.
-3. **Preview and apply.** Click **Parse & Preview**. Each changed field shows
-   an inline character-level diff (red = removed, green = added). Rows with
-   conflicts (empty value, duplicate word, word not present in contexts) are
-   not auto-selected — fix or uncheck them. Use the chips to filter by field
-   or jump to conflicts, and the selection buttons to bulk-toggle rows.
+<details>
+<summary>Full workflow, JSON format, and conflict rules</summary>
+
+### 1. Export JSON
+
+Click **Export JSON** in the Editor. The current filter's words are copied to
+your clipboard as a JSON array of `{ word, translation, contexts }` objects,
+sorted by difficulty.
+
+### 2. Paste back
+
+Click **Paste JSON**, send the array to an LLM, and paste its reply into the
+textarea. The reply must be the same array:
+
+- `word` is the **anchor** — it identifies the row and must not change.
+- To **rename**, add a `new_word` field (the new form must appear in the new
+  contexts, or the row is flagged `not_in_context`).
+- Line breaks inside strings must be escaped as `\n`.
+
+### 3. Preview and apply
+
+Click **Parse & Preview**. Each changed field shows an inline character-level
+diff (red = removed, green = added). Rows with conflicts (empty value,
+duplicate word, word not present in contexts) are not auto-selected — fix or
+uncheck them. Use the chips to filter by field or jump to conflicts, and the
+selection buttons to bulk-toggle rows.
 
 When you click **Apply**, the backend writes everything in **one** pass:
 
@@ -167,7 +207,7 @@ When you click **Apply**, the backend writes everything in **one** pass:
 - applies all valid changes
 - returns a per-item result; failures are reported as a toast
 
-Invalid items are skipped, valid ones are applied.
+</details>
 
 ---
 
@@ -206,6 +246,7 @@ Readland-Stats/
 │   └── style.css
 ├── web/index.html       # The single HTML page
 ├── main.py              # `python main.py` launcher
+├── requirements.txt     # fastapi, uvicorn[standard]
 └── pyproject.toml       # Ruff config only
 ```
 
@@ -213,7 +254,12 @@ Readland-Stats/
 
 ## Development
 
-Lint and format:
+### Run with auto-reload
+
+1. Set `DEBUG = True` in `app/config.py`.
+2. Run `python main.py` — Uvicorn will reload on every save.
+
+### Lint and format
 
 ```bash
 ruff check .
@@ -223,9 +269,46 @@ ruff format .
 Ruff is configured for `py310`, 120-char lines, and a mix of pycodestyle,
 Pyflakes, bugbear, and tryceratops rules — see `pyproject.toml`.
 
+### Architecture
+
+Everything runs in a single process — no database, no background jobs.
+The flow is one-directional:
+
+```
+data/user/readlang-data.txt
+        │
+        ▼
+   data_manager   parses only the "Your words" section
+        │
+        ▼
+      stats       pure-Python analytics, no pandas
+        │
+        ▼
+       api        FastAPI endpoints under /api/*
+        │
+        ▼
+   static/app.js  fetches JSON, renders tables and Chart.js plots
+```
+
+Settings are persisted to `data/settings.json`; every write goes through
+`data_manager.backup_csv()` first, so backups always exist under
+`data/backups/`.
+
 ### Adding a language
 
 1. Drop `static/i18n/xx.json` next to `en.json` / `ru.json`.
 2. Add `"xx"` to the `SUPPORTED` array at the top of `static/i18n.js`.
 
 The Settings language switcher picks it up automatically.
+
+### Contributing
+
+Issues and pull requests are welcome. There's no formal process yet — for
+anything non-trivial, open an issue first so we can agree on the shape before
+you write code. Small fixes (typos, docs, obvious bugs) can go straight to a PR.
+
+---
+
+## License
+
+MIT — see [LICENSE](LICENSE).
