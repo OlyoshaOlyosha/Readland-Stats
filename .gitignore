@@ -208,8 +208,10 @@ __marimo__/
 
 # AI config
 AGENTS.md
-.opencode/
 opencode.json
+.opencode/
+.agents/
+.freebuff
 .serena
 
 # Other
