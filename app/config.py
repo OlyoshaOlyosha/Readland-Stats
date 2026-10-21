@@ -8,7 +8,7 @@ CEFR_PATH = BASE_DIR / "data" / "cefr_mega_dataset.csv"  # optional, for CEFR
 WEB_DIR = BASE_DIR / "web"  # html pages
 STATIC_DIR = BASE_DIR / "static"  # js/css assets
 HOST = "127.0.0.1"
-PORT = 8000
+PORT = 8001
 DEBUG = False
 
 # SRS thresholds (in days). Change via /api/settings later.
